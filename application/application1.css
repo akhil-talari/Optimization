@@ -1,0 +1,19 @@
+/** file: overlay-chart.css (place in same directory as LayeredXyChartsSample */
+.chart-plot-background { 
+  -fx-background-color: transparent; 
+}
+.default-color0.chart-series-line { 
+  -fx-stroke: forestgreen; 
+}
+.chart-legend {
+   -fx-background-color:  transparent;
+   -fx-padding: 10px;
+}
+
+.chart-legend-item-symbol{
+   -fx-background-radius: 2;
+}
+
+.chart-legend-item{
+    -fx-text-fill: #191970;
+}
