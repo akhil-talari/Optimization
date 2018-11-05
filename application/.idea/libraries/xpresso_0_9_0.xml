@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="xpresso-0.9.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../OPT Jars/xpresso-0.9.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../OPT Jars/stanford-corenlp-1.3.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../OPT Jars/stdlib.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../OPT Jars/stdlib.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,50 @@
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+
+.mystyleclass{
+    -fx-background-color: green;
+}
+.status-red {
+    -fx-background-color:rgba(128,0,0,0.7);
+}
+.status-green {
+    -fx-background-color:rgba(0,128,0,0.7);
+}
+.status-blue {
+    -fx-background-color:rgba(0,20,128,0.7);
+}
+.chart-vertical-zero-line{
+    -fx-stroke: black;
+    -fx-stroke-width: 2px;
+}
+.chart-horizontal-zero-line{
+    -fx-stroke: black;
+    -fx-stroke-width: 2px;
+}
+.axis-tick-mark{
+	-fx-stroke: black;
+	 -fx-stroke-width: 1.5px;
+}
+.chart-vertical-grid-lines {
+    -fx-stroke: black;
+}
+.chart-legend{
+	-fx-background-color:  grey;
+}
+.default-color1.chart-symbol {
+-fx-background-color:  Red;
+ -fx-stroke:  #f9d900;
+    -fx-background-radius: 1px;
+
+    -fx-shape: "M2,0 L5,4 L8,0 L10,0 L10,2 L6,5 L10,8 L10,10 L8,10 L5,6 L2,10 L0,10 L0,8 L4,5 L0,2 L0,0 Z";
+}
+.default-color0.chart-symbol {
+ -fx-stroke: #00cc33;
+    -fx-background-radius: 7px;
+}
+
+.default-color0.chart-symbol { /* hollow circle */
+    -fx-background-color: #860061, white;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 15px;
+    -fx-padding: 5px;
+}

@@ -1,0 +1,30 @@
+/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+
+.mystyleclass{
+    -fx-background-color: green;
+}
+.status-red {
+    -fx-background-color:rgba(128,0,0,0.7);
+}
+.status-green {
+    -fx-background-color:rgba(0,128,0,0.7);
+}
+.status-blue {
+    -fx-background-color:rgba(0,20,128,0.7);
+}
+.chart-vertical-zero-line{
+    -fx-stroke: black;
+    -fx-stroke-width: 2px;
+}
+.chart-horizontal-zero-line{
+    -fx-stroke: black;
+    -fx-stroke-width: 2px;
+}
+.axis-tick-mark{
+	-fx-stroke: black;
+	 -fx-stroke-width: 1.5px;
+}
+.chart-vertical-grid-lines {
+    -fx-stroke: black;
+}
+
