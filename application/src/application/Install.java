@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import static application.Main.Install_SPMT;
+//import static application.Install_Chromosome.update_Install_Chromosome;
 
 public class Install {
 
@@ -16,6 +16,7 @@ public class Install {
     static HashMap<Integer,ArrayList<String>> CranesPerMonth;
     static HashMap<String, ArrayList<Integer>> chromofobjs;
     static ArrayList<int[]> objsfor3D;
+	static HashMap<String, Hookup_Chromosome> Hchromofobjs;
     static int flag=0;
     
 	
@@ -58,15 +59,50 @@ public class Install {
 		}
 
 		ScatterChartExample sce = new ScatterChartExample();
-		sce.start();
+		//sce.start();
 
 		Ranking ranking = new Ranking(current_population);
-		//Hookup.current = ranking.getSubfront(0).get(0);
-		
+		Scatter2DChart sc = new Scatter2DChart();
+		sc.start();
+		Hchromofobjs = new HashMap<String, Hookup_Chromosome>();
+		getTotalStorage(ranking.getSubfront(0).get(0).sequence);
+		ranking.getSubfront(0).get(0).update_Install_Chromosome(modinstallmonth, SPMTUsedpermonth, CranesPerMonth, StagingAreaPerMonth);
+		Hookup.current = ranking.getSubfront(0).get(0);
+		int num1 = (GA.max_Install_gen-1)*GA.Install_PopSize+1;
+		Hookup.currentNo = num1;
 		//Unit[] units = getFullSchedule(Hookup.current.sequence);
 		//System.out.println(modinstallmonth);
-		
-		//Hookup.initial();
+		Hookup.initial();
+		sc.run(1,Hookup.objsfor2D);
+
+
+		getTotalStorage(ranking.getSubfront(0).get(2).sequence);
+		ranking.getSubfront(0).get(2).update_Install_Chromosome(modinstallmonth, SPMTUsedpermonth, CranesPerMonth, StagingAreaPerMonth);
+		Hookup.current = ranking.getSubfront(0).get(2);
+		System.out.println(Hookup.current.sequence);
+		num1 = (GA.max_Install_gen-1)*GA.Install_PopSize+2;
+		Hookup.currentNo = num1;
+		Hookup.initial();
+		sc.run(2,Hookup.objsfor2D);
+
+		getTotalStorage(ranking.getSubfront(0).get(3).sequence);
+		ranking.getSubfront(0).get(3).update_Install_Chromosome(modinstallmonth, SPMTUsedpermonth, CranesPerMonth, StagingAreaPerMonth);
+		Hookup.current = ranking.getSubfront(0).get(3);
+		System.out.println(Hookup.current.sequence);
+		num1 = (GA.max_Install_gen-1)*GA.Install_PopSize+2;
+		Hookup.currentNo = num1;
+		Hookup.initial();
+		sc.run(3,Hookup.objsfor2D);
+
+		getTotalStorage(ranking.getSubfront(0).get(4).sequence);
+		ranking.getSubfront(0).get(4).update_Install_Chromosome(modinstallmonth, SPMTUsedpermonth, CranesPerMonth, StagingAreaPerMonth);
+		Hookup.current = ranking.getSubfront(0).get(4);
+		System.out.println(Hookup.current.sequence);
+		num1 = (GA.max_Install_gen-1)*GA.Install_PopSize+2;
+		Hookup.currentNo = num1;
+		Hookup.initial();
+		sc.run(4,Hookup.objsfor2D);
+
 	}
 
 	private ArrayList<Install_Chromosome> newPopAfterRanking(int populationSize, ArrayList<Install_Chromosome> union) {

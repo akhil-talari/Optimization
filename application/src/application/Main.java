@@ -7,22 +7,23 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 
-import org.scilab.forge.jlatexmath.TeXConstants;
-import org.scilab.forge.jlatexmath.TeXFormula; 
-
-
-
-
-
-
-
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.util.Duration;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellValue;
-import org.apache.poi.ss.usermodel.FormulaEvaluator;
-import org.apache.poi.ss.usermodel.Row;
+import org.scilab.forge.jlatexmath.TeXConstants;
+import org.scilab.forge.jlatexmath.TeXFormula;
+
+
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -37,29 +38,9 @@ import javafx.stage.Stage;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
-import javafx.scene.control.Spinner;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TitledPane;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
@@ -70,10 +51,6 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
@@ -85,14 +62,23 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 
+import static application.Scatter2DChart.slider_max;
+
 public class Main extends Application {
 
 	Label l;
 	Group grp;
+	Group grp_sim;
+	Group grp_img;
 	File file1;
+	HBox hb=new HBox();
 	public static HashMap<String,Color> areas;
 	public static Node mynode = null;
-	ImageView imgView;
+
+	String months_simulate ;
+	String months_conn_simulate;
+
+	ImageView imgView, imgview_sim;
 	Line currentLine;
 	XSSFSheet sheet, sheet_conn;
 	XSSFWorkbook workbook,workbook_conn;
@@ -112,6 +98,24 @@ public class Main extends Application {
 	public static TableView<AreaMS> Area_MStones;
 	public static HashMap<Integer, String> ZoneDirection = new HashMap<Integer, String>();
 
+	//NOV5
+	public static SplitPane splitPane_sim;
+	public static Tab Simulate;
+	public static Slider opacityLevel;
+	//NOV5
+
+	Rectangle rect_sim;
+	Timeline timeline, timeline2;
+	Duration timepoint, timepoint2;
+	Duration pause;
+	int countttt = 0;
+	List<Line> trackline = new ArrayList<>();
+	HashMap<Rectangle, Label> rect_ani = new HashMap<Rectangle, Label>();
+	Multimap<String, Rectangle> install_ani = HashMultimap.create();
+	Multimap<String, Line> conn_ani =  HashMultimap.create();
+	Multimap<Double, String> Module_under = HashMultimap.create();
+	HashMap<Rectangle, Label> trackrect = new HashMap<Rectangle, Label>();
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public void start(Stage primaryStage) {
@@ -120,7 +124,7 @@ public class Main extends Application {
  			TabPane tabs = new TabPane();
 			Tab project_Mod = new Tab();
 			Tab Calc_Mod = new Tab();
-			Tab Simulate = new Tab();
+			Simulate = new Tab(); //NOV5
 			Tab Optimize = new Tab();
 			
 			project_Mod.setText("Project Modeling");
@@ -144,11 +148,324 @@ public class Main extends Application {
 			primaryStage.show();
 			
 //*****************************************Simulate************************************************************		
-			
-		
-			
-		
-			
+
+			final ToggleGroup group = new ToggleGroup();
+
+			RadioButton rb1 = new RadioButton("Install Schedule");
+			rb1.setToggleGroup(group);
+			rb1.setSelected(true);
+			rb1.setUserData("Install Schedule");
+
+			RadioButton rb2 = new RadioButton("Hookup Schedule");
+			rb2.setToggleGroup(group);
+			rb2.setUserData("Hookup Schedule");
+
+			RadioButton rb3 = new RadioButton("Overall Schedule");
+			rb3.setToggleGroup(group);
+			rb3.setUserData("Overall Schedule");
+
+			Rectangle rec_constructed = new Rectangle(20, 20, 20, 20);
+			rec_constructed.setFill(Color.BLUE);
+			Rectangle rec_under = new Rectangle(20, 20, 20, 20);
+			rec_under.setFill(Color.RED);
+
+			Line line_const = new Line(rec_constructed.getX(), rec_constructed.getY()+20,
+					rec_constructed.getX() + 40, rec_constructed.getY()+20);
+			line_const.setStroke(Color.BLACK);
+			line_const.setStrokeWidth(2);
+
+			Line line_const_d = new Line(rec_constructed.getX(), rec_constructed.getY()+20,
+					rec_constructed.getX() + 40, rec_constructed.getY()+20);
+			line_const_d.setStroke(Color.GREEN);
+			line_const_d.setStrokeWidth(6);
+
+			Line line_under = new Line(rec_constructed.getX(), rec_constructed.getY()+20,
+					rec_constructed.getX() + 40, rec_constructed.getY()+20);
+			line_under.setStroke(Color.RED);
+			line_under.setStrokeWidth(2);
+
+			Line line_under_double = new Line(rec_constructed.getX(), rec_constructed.getY()+20,
+					rec_constructed.getX() + 40, rec_constructed.getY()+20);
+			line_under_double.setStroke(Color.RED);
+			line_under_double.setStrokeWidth(6);
+
+//			Line line = new Line(rectangle.getX(), rectangle.getY()+30,
+//					rectangle.getX() + 50, rectangle.getY()+30);
+//			line.setStroke(Color.BLACK);
+//			line.setStrokeWidth(5);
+
+			opacityLevel = new Slider(29, 55, 1); //NOV5
+			final Label opacityCaption = new Label("Navigation bar:");
+			final Label opacityValue = new Label("Current view: month ");
+			final Label opacityValue_chnage = new Label(Double.toString(opacityLevel.getValue()));
+
+			final Label under = new Label("Module Under installation:");
+			final Label constructed = new Label("Module Installed:");
+			//final Label future = new Label("To be constructed: Invisible");
+			final Label under_conn = new Label("Hookup Under Construction: Single");
+			final Label under_conn_double = new Label("Hookup Under Construction: Double");
+			final Label constructed_conn = new Label("Hookup Completed: Single");
+			final Label constructed_conn_d = new Label("Hookup Completed: Double");
+
+			final Label modules_under = new Label("Modules Under Installation:");
+//			final Label modules_text = new Label("");
+			TextArea modules_text = new TextArea();
+
+			opacityLevel.setShowTickMarks(true);
+			opacityLevel.setShowTickLabels(true);
+			opacityLevel.setMajorTickUnit(1f);
+			opacityLevel.setBlockIncrement(1f);
+
+			/*RadioButton rb3 = new RadioButton("Install Resource Variation");
+			rb3.setToggleGroup(group);
+			rb3.setUserData("Install Resource Variation");
+
+			RadioButton rb4 = new RadioButton("Hookup Resource Variation");
+			rb4.setToggleGroup(group);
+			rb4.setUserData("Hookup Resource Variation");
+			*/
+
+			Button reset = new Button("Reset");
+			Button play = new Button("Auto-Play");
+			/*Sim_install.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent arg0) {
+
+					if(group.getSelectedToggle().getUserData().equals("Install Schedule")){
+						GanttChart.start_GanttChart(1);
+					}
+					else if(group.getSelectedToggle().getUserData().equals("Hookup Schedule")){
+						GanttChart.start_GanttChart(2);
+					}
+					else if(group.getSelectedToggle().getUserData().equals("Install Resource Variation")){
+
+						//Histogram.start_Hist(1);
+					}
+					else if(group.getSelectedToggle().getUserData().equals("Hookup Resource Variation")){
+
+						//Histogram.start_Hist(2);
+					}
+
+				}
+
+			});*/
+
+			GridPane grid44 = new GridPane();
+			grid44.setVgap(4);
+			grid44.setPadding(new Insets(1, 1, 1, 1));
+
+			//VBox sim = new VBox();
+			//sim.setPadding(new Insets(20, 20, 20, 20));
+			//sim.setSpacing(10);
+
+			//sim.getChildren().add(rb2);
+			grid44.add(opacityCaption, 0,1);
+			grid44.add(opacityLevel, 0, 2);
+			grid44.add(opacityValue, 0, 3);
+			grid44.add(opacityValue_chnage, 1, 3);
+			grid44.add(under, 0, 4);
+			grid44.add(rec_under, 1, 4);
+			grid44.add(constructed, 0, 5);
+			grid44.add(rec_constructed, 1, 5);
+			grid44.add(under_conn, 0, 6);
+			grid44.add(line_under, 1, 6);
+			grid44.add(under_conn_double, 0,7);
+			grid44.add(line_under_double,1,7);
+
+			grid44.add(constructed_conn, 0, 8);
+			grid44.add(line_const, 1, 8);
+			grid44.add(constructed_conn_d, 0, 9);
+			grid44.add(line_const_d, 1, 9);
+
+			grid44.add(rb1, 0, 10);
+			grid44.add(rb2, 0, 11);
+			grid44.add(rb3, 0, 12);
+			grid44.add(reset, 0, 13);
+			grid44.add(play, 0, 14);
+			grid44.add(modules_under, 0, 15);
+			grid44.add(modules_text,0,16);
+			modules_text.setMaxSize(190, 80);
+			modules_text.setWrapText(true);
+
+			// scrollpane for rightside of splitpane
+			ScrollPane scrollPane_sim = new ScrollPane();
+			scrollPane_sim.setFitToHeight(true);
+			scrollPane_sim.setFitToWidth(true);
+			scrollPane_sim.setHbarPolicy(ScrollBarPolicy.ALWAYS);
+			scrollPane_sim.setVbarPolicy(ScrollBarPolicy.ALWAYS);
+
+			Pane leftPane1 = new Pane();
+			leftPane1.getChildren().add(grid44);
+
+
+
+			grp_sim = new Group();
+
+			grp_img = new Group();
+			//scrollPane_sim.setContent(imgview_sim);
+			scrollPane_sim.setContent(new Group(grp_sim));
+
+			//grp_sim.getChildren().addAll(imgview_sim);
+
+
+			splitPane_sim = new SplitPane(); //NOV5
+			splitPane_sim.getItems().addAll(leftPane1, scrollPane_sim);
+			splitPane_sim.setDividerPositions(0.30);
+			leftPane1.maxWidthProperty().bind(
+					splitPane_sim.widthProperty().multiply(0.28));
+			splitPane_sim.prefHeightProperty().bind(scene.heightProperty());
+			Simulate.setContent(splitPane_sim);
+
+			opacityLevel.valueProperty().addListener(new ChangeListener<Number>() {
+				public void changed(ObservableValue<? extends Number> ov,
+									Number old_val, Number new_val) {
+					//System.out.println(Math.round(new_val.doubleValue()));
+					opacityValue_chnage.setText(String.format("%d", Math.round((Double) new_val)));
+					Double d = Double.valueOf(opacityValue_chnage.getText());
+					//display_remove(d);
+					if(group.getSelectedToggle().getUserData().equals("Install Schedule")) {
+						for (Map.Entry<Rectangle, Label> entry : trackrect.entrySet()) {
+							grp_sim.getChildren().removeAll(entry.getKey(), entry.getValue());
+						}
+						display(d);
+						String p = "";
+						Collection<String> mo = Module_under.get(d);
+						for (String s : mo){
+							s = s.substring(0, s.length() - 2);
+							p = p + s + ",";
+						}
+						modules_text.setText(p);
+					}
+
+					else if(group.getSelectedToggle().getUserData().equals("Hookup Schedule")) {
+						for(int i = 0; i < trackline.size(); i++){
+							grp_sim.getChildren().remove(trackline.get(i));
+						}
+						display_conn(d);
+					}
+
+					else if(group.getSelectedToggle().getUserData().equals("Overall Schedule")) {
+						for (Map.Entry<Rectangle, Label> entry : trackrect.entrySet()) {
+							grp_sim.getChildren().removeAll(entry.getKey(), entry.getValue());
+						}
+						for(int i = 0; i < trackline.size(); i++){
+							grp_sim.getChildren().remove(trackline.get(i));
+						}
+						display(d);
+						String p = "";
+						Collection<String> mo = Module_under.get(d);
+						for (String s : mo){
+							s = s.substring(0, s.length() - 2);
+							p = p + s + ",";
+						}
+						modules_text.setText(p);
+						display_conn(d);
+					}
+				}
+			});
+
+
+			reset.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+				@Override
+				public void handle(MouseEvent event) {
+					//if(group.getSelectedToggle().getUserData().equals("Install Schedule")){}
+					grp_sim.getChildren().clear();
+					grp_sim.getChildren().addAll(imgview_sim);
+					Double d = Double.valueOf(opacityValue_chnage.getText());
+//					if(Animation.Status.RUNNING == timeline.getStatus())
+//					{timeline.stop();}
+					modules_text.setText("");
+					try{timeline.stop();}catch (NullPointerException ex){}
+				}
+			});
+
+			play.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+				@Override
+				public void handle(MouseEvent event) {
+					//if(group.getSelectedToggle().getUserData().equals("Install Schedule")){}
+					grp_sim.getChildren().clear();
+					grp_sim.getChildren().addAll(imgview_sim);
+					timeline = new Timeline();
+					timepoint = Duration.ZERO;
+					pause = Duration.seconds(1);
+					display_animation(55);
+					display_animation_conn(55);
+					Set<String> keys = install_ani.keySet();
+					Set<String> sorted_modules= new TreeSet(keys);
+
+					Set<String> keys1 = conn_ani.keySet();
+					Set<String> sorted_connection= new TreeSet(keys1);
+
+					for (String keyprint : sorted_modules) {
+						//System.out.println(keyprint);
+						Collection<Rectangle> values = install_ani.get(keyprint);
+						for (Rectangle value : values) {
+							timepoint = timepoint.add(pause);
+							KeyFrame keyFrame = new KeyFrame(timepoint, rh -> grp_sim.getChildren().addAll(value, rect_ani.get(value)));
+							timeline.getKeyFrames().add(keyFrame);
+						}
+						if (sorted_connection.contains(keyprint)) {
+							Collection<Line> values1 = conn_ani.get(keyprint);
+							for (Line value1 : values1) {
+								timepoint = timepoint.add(pause);
+								KeyFrame keyFrame = new KeyFrame(timepoint, rh -> grp_sim.getChildren().add(value1));
+								timeline.getKeyFrames().add(keyFrame);
+								sorted_connection.remove(keyprint);
+							}
+						}
+					}
+					//System.out.println(sorted_connection);
+					Set<String> sorted_connection1= new TreeSet(sorted_connection);
+					for (String keyprint : sorted_connection1) {
+						Collection<Line> values2 = conn_ani.get(keyprint);
+						for (Line value2 : values2) {
+							timepoint = timepoint.add(pause);
+							KeyFrame keyFrame = new KeyFrame(timepoint, rh -> grp_sim.getChildren().add(value2));
+							timeline.getKeyFrames().add(keyFrame);
+							sorted_connection.remove(keyprint);
+						}
+					}
+					//System.out.println(timeline.getTotalDuration());
+					timeline.play();
+					//System.out.println(timeline.getTotalDuration());
+				}});
+
+			/*play.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+				@Override
+				public void handle(MouseEvent event) {
+					//if(group.getSelectedToggle().getUserData().equals("Install Schedule")){}
+					grp_sim.getChildren().clear();
+					grp_sim.getChildren().addAll(imgview_sim);
+					timeline = new Timeline();
+					timeline2 = new Timeline();
+					timepoint = Duration.ZERO ;
+					timepoint2 = Duration.ZERO ;
+					pause = Duration.seconds(1);
+                    display_animation(55);
+                    display_animation_conn(55);
+                    for (Map.Entry< Rectangle, Label> entry : rect_ani.entrySet()) {
+                        timepoint = timepoint.add(pause);
+                        KeyFrame keyFrame = new KeyFrame(timepoint, rh -> grp_sim.getChildren().addAll(entry.getKey(), entry.getValue()));
+                        timeline.getKeyFrames().add(keyFrame);
+                    }
+
+					for (Map.Entry< Line, String> entry : conn_ani.entrySet()) {
+						timepoint = timepoint.add(pause);
+						KeyFrame keyFrame = new KeyFrame(timepoint, rh -> grp_sim.getChildren().addAll(entry.getKey()));
+						timeline.getKeyFrames().add(keyFrame);
+					}
+                    System.out.println(timeline.getTotalDuration());
+                    timeline.play();
+				}
+			});*/
+
+
+
+
 //*****************************************Optimize************************************************************
 			Button btn_opt = new Button("Optimize");
 		//	Button ros_opt = new Button("ROS-Optimize");
@@ -235,19 +552,19 @@ public class Main extends Application {
 			cost_grid.setVgap(10);
 			cost_grid.setPadding(new Insets(5, 5, 5, 5));
 			cost_grid.add(cost, 0, 1);
-			cost_grid.add(new Label("Piping Cost/Crew:	"), 0, 2);
+			cost_grid.add(new Label("Piping Cost/Crew/hour:	"), 0, 2);
 			cost_grid.add(pcost, 2, 2);
-			cost_grid.add(new Label("Piping Manhours/Crew:	"), 0, 3);
+			cost_grid.add(new Label("Piping Manhours/Crew/hour:	"), 0, 3);
 			cost_grid.add(pMH, 2, 3);
 			cost_grid.add(cost1, 0, 4);
-			cost_grid.add(new Label("Electrical Cost/Crew:	"), 0, 5);
+			cost_grid.add(new Label("Electrical Cost/Crew/hour:	"), 0, 5);
 			cost_grid.add(ecost, 2, 5);
-			cost_grid.add(new Label("Electrical Manhours/Crew: "), 0, 6);
+			cost_grid.add(new Label("Electrical Manhours/Crew/hour: "), 0, 6);
 			cost_grid.add(eMH, 2, 6);
 			cost_grid.add(cost2,0,7);
-			cost_grid.add(new Label("Instrumentation/Crew: "), 0, 8);
+			cost_grid.add(new Label("Instrumentation/Crew/hour: "), 0, 8);
 			cost_grid.add(icost, 2, 8);
-			cost_grid.add(new Label("Instrumentation Manhours/Crew:	"), 0, 9);
+			cost_grid.add(new Label("Instrumentation Manhours/Crew/hour:	"), 0, 9);
 			cost_grid.add(iMH, 2, 9);
 			
 			VBox v_cost = new VBox();
@@ -591,6 +908,12 @@ public class Main extends Application {
 					imgView.setSmooth(true);
 					grp.getChildren().add(imgView);
 
+
+					imgview_sim = new ImageView(image);
+					imgview_sim.setImage(image);
+					imgview_sim.setSmooth(true);
+					hb.getChildren().add(imgview_sim);
+
 					alert.setTitle("STEP2");
 					alert.setContentText("Choose Module List Excel");
 					alert.showAndWait();
@@ -630,7 +953,7 @@ public class Main extends Application {
 						}
 					});
 					
-					update_zones("1","Random");
+					//update_zones("1","Random");
 
 				}
 			});
@@ -662,6 +985,12 @@ public class Main extends Application {
 						imgView.setImage(image);
 						imgView.setSmooth(true);
 						grp.getChildren().add(imgView);
+
+
+						imgview_sim = new ImageView(image);
+						imgview_sim.setImage(image);
+						imgview_sim.setSmooth(true);
+						grp_sim.getChildren().add(imgview_sim);
 					}	
 					
 					if(selectedDirectory.isDirectory()){
@@ -704,17 +1033,25 @@ public class Main extends Application {
 						} else {
 							update_list();
 						}
-						update_zones("1","Random");
+
 					}
-					
+
+					//changed
 					if(selectedDirectory.isDirectory()){
 						File[] xlsxfile1 = selectedDirectory.listFiles(new FilenameFilter() {
-						    public boolean accept(File dir, String name) {
-						        return name.toLowerCase().endsWith("newconn.xlsx");
-						    }
+							public boolean accept(File dir, String name) {
+								return name.endsWith("newPD.xlsx");
+							}
 						});
 						list1.getItems().clear();
 						read_conn_excel(xlsxfile1[0]);
+
+						if(ZoneDirection.containsKey(1)){
+							update_zones("1",ZoneDirection.get(1));
+						}else{
+							update_zones("1","Random");
+						}
+
 					}
 					
 				}
@@ -1028,6 +1365,7 @@ public class Main extends Application {
 		
 	}
 
+	//changed this function
 	protected void read_conn_excel(File file) {
 		int flag=0;
 		try {
@@ -1035,7 +1373,7 @@ public class Main extends Application {
 			workbook_conn = new XSSFWorkbook(file);
 			sheet_conn = workbook_conn.getSheetAt(0);
 			rows_conn = sheet_conn.getPhysicalNumberOfRows();
-			
+
 			for (int r = 0; r <= rows_conn; r++) {
 				Row row = sheet_conn.getRow(r);
 				if (row != null) {
@@ -1046,9 +1384,9 @@ public class Main extends Application {
 
 						Line line = new Line(row.getCell(3).getNumericCellValue(),row.getCell(4).getNumericCellValue(),row.getCell(5).getNumericCellValue(),row.getCell(6).getNumericCellValue());
 						line.setId(cell.getStringCellValue());
-					
+
 						Cell cell1 = row.getCell(1);
-						
+
 						if(cell1.getStringCellValue().equals("Single")) {
 							line.setStroke(Color.BLACK);
 							line.setStrokeWidth(3);
@@ -1072,13 +1410,60 @@ public class Main extends Application {
 			if(flag==1){
 				conn_no++;
 			}
-			
+			XSSFSheet sheet_PD = workbook_conn.getSheetAt(1);
+			int rowsPD = sheet_PD.getPhysicalNumberOfRows();
+			int zonedetails = 0;
+			int milestones = 0;
+
+			ArrayList<AreaMS> data1 = new ArrayList<AreaMS>();
+
+			for (int r = 0; r <= rowsPD; r++) {
+				Row row = sheet_PD.getRow(r);
+				if (row != null) {
+					// for(int c = 0; c < cols; c++) {
+					Cell cell = row.getCell(0);
+
+					if(cell != null && milestones == 1){
+
+						Cell cell1 = row.getCell(1);
+						String area = cell.getStringCellValue();
+						String MS = cell1.getStringCellValue();
+						data1.add(new AreaMS(area, MS));
+					}
+
+					if(cell!=null && cell.getCellTypeEnum()== CellType.STRING){
+						if(cell != null && cell.getStringCellValue().equals("Project Milestones")){
+
+							zonedetails =0;
+							milestones = 1;
+						}
+					}
+					if(cell != null && zonedetails == 1){
+
+						Cell cell1 = row.getCell(1);
+						int zone = (int) cell.getNumericCellValue();
+						//		System.out.println("Zone: "+zone);
+						String direction = cell1.getStringCellValue();
+
+						ZoneDirection.put(zone, direction);
+					}
+					if(cell!=null && cell.getCellTypeEnum()==CellType.STRING){
+						if (cell != null && cell.getStringCellValue().equals("Zone Direction")) {
+
+							zonedetails =1;
+						}
+					}
+
+				}
+			}
+			final ObservableList<AreaMS> data = FXCollections.observableArrayList(data1);
+			Area_MStones.setItems(data);
 
 		} catch (Exception e) {
 
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	public static void getmodforconn(Line line,MyConn conn) {
@@ -1161,6 +1546,7 @@ public class Main extends Application {
 		});
 	}
 
+	//changed this function
 	public void write_toExcel(HashMap<Integer, MyObject> module_label)  {
 		String folder = "";
 		int count = 0;
@@ -1186,12 +1572,12 @@ public class Main extends Application {
 						;
 						CellValue cellvalue = evaluator.evaluate(cell);
 						for (int i = 0; i < module_label.size(); i++) {
-							
+
 							if (module_label.get(i).name.equals(Double
 									.toString(cellvalue.getNumberValue()))) {
-							
+
 								cell = (XSSFCell) row.getCell(0);
-								
+
 								writeallcells(cell, row,module_label.get(i).id, 0);
 								cell = (XSSFCell) row.getCell(1);
 								writeallcells(cell, row,
@@ -1264,12 +1650,12 @@ public class Main extends Application {
 			}
 
 			file.close();
-			
-			 
-			 boolean success = new File(System.getProperty("user.home") + "\\Desktop\\SavedProject").mkdirs();
-			 if(success){
+
+
+			boolean success = new File(System.getProperty("user.home") + "\\Desktop\\SavedProject").mkdirs();
+			if(success){
 				folder = System.getProperty("user.home") + "\\Desktop\\SavedProject";
-			 }		
+			}
 			FileOutputStream outFile = new FileOutputStream(new File(folder+"\\new.xlsx"));
 			workbook.write(outFile);
 			outFile.close();
@@ -1280,38 +1666,39 @@ public class Main extends Application {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
+		//Connection Details Excel
 		XSSFWorkbook workbook_conn = new XSSFWorkbook();
-        XSSFSheet sheet_conn = workbook_conn.createSheet("Connections");
-         
-        int rowCount = 0;
-         
-        for (int i=1;i<=connection.size();i++) {
-        	MyConn temp = connection.get(i+"");
-            Row row = sheet_conn.createRow(rowCount++);
-             
-            int columnCount = 0;
-            Cell cell = row.createCell(columnCount++);
-            cell.setCellValue((String) temp.Name);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((String) temp.Conn_Type);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((String) temp.conn_between);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((Double) temp.startx);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((Double) temp.starty);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((Double) temp.endx);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((Double) temp.endy);
-            cell = row.createCell(columnCount++);
-            cell.setCellValue((Integer) temp.orientation);
-          
-        }
-         
-         
-        FileOutputStream outputStream;
+		XSSFSheet sheet_conn = workbook_conn.createSheet("Connections");
+
+		int rowCount = 0;
+
+		for (int i=1;i<=connection.size();i++) {
+			MyConn temp = connection.get(i+"");
+			Row row = sheet_conn.createRow(rowCount++);
+
+			int columnCount = 0;
+			Cell cell = row.createCell(columnCount++);
+			cell.setCellValue((String) temp.Name);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((String) temp.Conn_Type);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((String) temp.conn_between);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((Double) temp.startx);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((Double) temp.starty);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((Double) temp.endx);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((Double) temp.endy);
+			cell = row.createCell(columnCount++);
+			cell.setCellValue((Integer) temp.orientation);
+
+		}
+
+
+   /*     FileOutputStream outputStream;
 		try {
 			folder = System.getProperty("user.home") + "\\Desktop\\SavedProject";
 			outputStream = new FileOutputStream(new File(folder+"\\newconn.xlsx"));
@@ -1319,10 +1706,65 @@ public class Main extends Application {
 			outputStream.close();
 	        workbook_conn.close();
 		} catch (IOException e) {
-			
+
 			e.printStackTrace();
 		}
-        
+		*/
+		//Project Details excel
+		//	XSSFWorkbook workbook_projectDetails = new XSSFWorkbook();
+		XSSFSheet sheet_projectDetails = workbook_conn.createSheet("ProjectDetails");
+
+		//Zone Direction Details
+		int rowCount1 = 0;
+		int columnCount1 = 0;
+
+		//Set Zone direction heading
+		Row rowheader = sheet_projectDetails.createRow(rowCount1++);
+		Cell cell = rowheader.createCell(columnCount1);
+		cell.setCellValue("Zone Direction");
+
+		Set<Integer> zones = ZoneDirection.keySet();
+		for(int zone : zones){
+
+			columnCount1 = 0;
+			Row rowzones = sheet_projectDetails.createRow(rowCount1++);
+			cell = rowzones.createCell(columnCount1++);
+			cell.setCellValue((Integer)zone);
+			cell = rowzones.createCell(columnCount1++);
+			cell.setCellValue((String)ZoneDirection.get(zone));
+		}
+
+		//Set Project Milestone heading
+		columnCount1 = 0;
+		Row rowheader2 = sheet_projectDetails.createRow(rowCount1++);
+		cell = rowheader2.createCell(columnCount1);
+		cell.setCellValue((String)"Project Milestones");
+
+		for (AreaMS o : Main.Area_MStones.getItems()) {
+
+			String area1 = Main.AreaName.getCellData(o);
+			String MS = Main.AreaDL.getCellData(o);
+
+			columnCount1 = 0;
+			Row rowMS = sheet_projectDetails.createRow(rowCount1++);
+			cell = rowMS.createCell(columnCount1++);
+			cell.setCellValue((String)area1);
+			cell = rowMS.createCell(columnCount1++);
+			cell.setCellValue((String)MS);
+		}
+
+		FileOutputStream outputStream1;
+		try {
+			folder = System.getProperty("user.home") + "\\Desktop\\SavedProject";
+			outputStream1 = new FileOutputStream(new File(folder+"\\newPD.xlsx"));
+			workbook_conn.write(outputStream1);
+			outputStream1.close();
+			workbook_conn.close();
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		}
+
 
 	}
 
@@ -1358,19 +1800,19 @@ public class Main extends Application {
 
 	// read excel and copy the module numbers to listview
 	public int read_excel(File file12) {
-		
+
 		list2.getItems().clear();
 		areas = new HashMap<String,Color>();
-	
+
 		ArrayList<AreaMS> data1 = new ArrayList<AreaMS>();
-		
+
 		int flag = 0;
 		try {
 
 			workbook = new XSSFWorkbook(file12);
 			sheet = workbook.getSheetAt(0);
 			rows = sheet.getPhysicalNumberOfRows();
-			
+
 			FormulaEvaluator evaluator = workbook.getCreationHelper()
 					.createFormulaEvaluator();
 
@@ -1379,20 +1821,24 @@ public class Main extends Application {
 				if (row != null) {
 					// for(int c = 0; c < cols; c++) {
 					Cell cell = row.getCell(2);
-					
+					//start NOV5
 					if (cell != null && !cell.toString().equals("Module No.")) {
 						if(!areas.containsKey(row.getCell(1).getStringCellValue())){
-							
+
 							areas.put(row.getCell(1).getStringCellValue(),Color.color(Math.random(), Math.random(), Math.random()));
-							
-							data1.add(new AreaMS(row.getCell(1).getStringCellValue(),"100"));
+
+							//changed
+							if(row.getCell(17)==null){
+								data1.add(new AreaMS(row.getCell(1).getStringCellValue(),""));
+							}
 						}
 
+						//end NOV5
 						CellValue cellvalue = evaluator.evaluate(cell);
 
 						MyObject temp = new MyObject(Double.toString(cellvalue
 								.getNumberValue()));
-						
+
 						cell = row.getCell(17);
 						if (cell != null) {
 
@@ -1422,7 +1868,7 @@ public class Main extends Application {
 					// }
 				}
 			}
-			
+
 		final ObservableList<AreaMS> data = FXCollections.observableArrayList(data1);
 	    Area_MStones.setItems(data);
 		} catch (Exception e) {
@@ -1514,6 +1960,422 @@ public class Main extends Application {
 			temp.zone = row.getCell(21).toString();
 		}
 		
+	}
+
+	public void read_prop_excel_simulate(Row row, MyObject temp, Rectangle m, double d) {
+
+		FormulaEvaluator evaluator = workbook.getCreationHelper()
+				.createFormulaEvaluator();
+		months_simulate = (row.getCell(2)).toString();
+		if(Double.valueOf(months_simulate) <= d){
+
+			temp.area = row.getCell(1).toString();
+			temp.name = row.getCell(0).toString();
+
+			temp.x = row.getCell(3).toString();
+			temp.y = row.getCell(4).toString();
+			temp.objheight = row.getCell(5).toString();
+			temp.objwidth = row.getCell(6).toString();
+		}
+	}
+
+
+	public int read_excel_simulate(String file12, double d) {
+		areas = new HashMap<String,Color>();
+		int flag = 0;
+		try {
+
+			//InputStream inp = new FileInputStream(file12);
+			//Workbook wb = WorkbookFactory.create(inp);
+			workbook = new XSSFWorkbook(new File(file12));
+			sheet = workbook.getSheetAt(0);
+			rows = sheet.getPhysicalNumberOfRows();
+
+			FormulaEvaluator evaluator = workbook.getCreationHelper()
+					.createFormulaEvaluator();
+
+			for (int r = 0; r <= rows; r++) {
+				Row row = sheet.getRow(r);
+				if (row != null) {
+					// for(int c = 0; c < cols; c++) {
+					Cell cell = row.getCell(0);
+
+					if (cell != null ) {
+						if(!areas.containsKey(row.getCell(1).getStringCellValue())){
+
+							areas.put(row.getCell(1).getStringCellValue(),Color.color(Math.random(), Math.random(), Math.random()));
+						}
+
+						CellValue cellvalue = evaluator.evaluate(cell);
+
+						MyObject temp = new MyObject(Double.toString(cellvalue
+								.getNumberValue()));
+
+						cell = row.getCell(3);
+						if (cell != null) {
+
+							flag = 1;
+
+							read_prop_excel_simulate(row, temp, null, d);
+							try {
+
+								rect_sim = new Rectangle(Double.parseDouble(temp.x), Double.parseDouble(temp.y),
+										Double.parseDouble(temp.objwidth),
+										Double.parseDouble(temp.objheight));
+								l = new Label(Integer.toString((int) Double
+										.parseDouble(temp.name)));
+								rect_sim.setId(Integer.toString(rect_no));
+								if(Double.valueOf(months_simulate) == d){
+									rect_sim.setFill(Color.RED);
+									//System.out.println(temp.name);
+									Module_under.put(d, temp.name);
+									//rect_sim.setStroke(Color.BLACK);
+
+								}else{
+									rect_sim.setFill(Color.BLUE);
+								}
+
+								//rect_sim.setFill(areas.get(temp.area));}
+								//rect.relocate(Double.parseDouble(temp.x) + 20,Double.parseDouble(temp.y) + 20);
+								l.relocate(Double.parseDouble(temp.x),
+										Double.parseDouble(temp.y) - 15);
+
+								trackrect.put(rect_sim, l);//dont add here.. sort and add
+								grp_sim.getChildren().addAll(rect_sim, l);
+								//module.add(rect);
+								//conn_label.put(rect_no, temp);
+								ReadProps.run(rect_sim);
+								rect_no++;
+								temp.color = 1;
+
+							}catch (NullPointerException ex){
+							}
+						}
+
+					}
+					// }
+				}
+			}
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
+		return flag;
+	}
+
+	public int read_excel_simulate_animation(String file12, double d) {
+		areas = new HashMap<String,Color>();
+		int flag = 0;
+		try {
+
+			//InputStream inp = new FileInputStream(file12);
+			//Workbook wb = WorkbookFactory.create(inp);
+			workbook = new XSSFWorkbook(new File(file12));
+			sheet = workbook.getSheetAt(0);
+			rows = sheet.getPhysicalNumberOfRows();
+
+			FormulaEvaluator evaluator = workbook.getCreationHelper()
+					.createFormulaEvaluator();
+
+			for (int r = 0; r <= rows; r++) {
+				Row row = sheet.getRow(r);
+				if (row != null) {
+					// for(int c = 0; c < cols; c++) {
+					Cell cell = row.getCell(0);
+
+					if (cell != null ) {
+						if(!areas.containsKey(row.getCell(1).getStringCellValue())){
+
+							areas.put(row.getCell(1).getStringCellValue(),Color.color(Math.random(), Math.random(), Math.random()));
+						}
+
+						CellValue cellvalue = evaluator.evaluate(cell);
+
+						MyObject temp = new MyObject(Double.toString(cellvalue
+								.getNumberValue()));
+
+						cell = row.getCell(3);
+						if (cell != null) {
+
+							flag = 1;
+
+							read_prop_excel_simulate(row, temp, null, d);
+							try {
+
+								rect_sim = new Rectangle(Double.parseDouble(temp.x), Double.parseDouble(temp.y),
+										Double.parseDouble(temp.objwidth),
+										Double.parseDouble(temp.objheight));
+								l = new Label(Integer.toString((int) Double
+										.parseDouble(temp.name)));
+								rect_sim.setId(Integer.toString(rect_no));
+								if(Double.valueOf(months_simulate) == d){
+									rect_sim.setFill(Color.RED);
+									//rect_sim.setStroke(Color.BLACK);
+
+								}else{
+									rect_sim.setFill(Color.BLUE);}
+								//rect.relocate(Double.parseDouble(temp.x) + 20,Double.parseDouble(temp.y) + 20);
+								l.relocate(Double.parseDouble(temp.x),
+										Double.parseDouble(temp.y) - 15);
+
+								rect_ani.put(rect_sim, l);
+								//System.out.println(months_simulate);
+								//System.out.println(rect_sim);
+								install_ani.put(months_simulate, rect_sim);
+								countttt++;
+								//System.out.println(countttt);
+								ReadProps.run(rect_sim);
+								rect_no++;
+								temp.color = 1;
+
+							}catch (NullPointerException ex){
+							}
+						}
+
+					}
+					// }
+				}
+			}
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
+		return flag;
+	}
+
+
+	protected void read_conn_excel_simulate_animation(String file, Double d) {
+		int flag=0;
+		try {
+
+			workbook_conn = new XSSFWorkbook(file);
+			sheet_conn = workbook_conn.getSheetAt(0);
+			rows_conn = sheet_conn.getPhysicalNumberOfRows();
+
+			for (int r = 0; r <= rows_conn; r++) {
+				Row row = sheet_conn.getRow(r);
+				if (row != null) {
+
+					// for(int c = 0; c < cols; c++) {
+					Cell cell = row.getCell(0);
+
+					if (cell != null ) {
+						months_conn_simulate = (row.getCell(2)).toString();
+						if (Double.valueOf(months_conn_simulate) <= d) {
+
+							Line line = new Line(row.getCell(4).getNumericCellValue(), row.getCell(5).getNumericCellValue(), row.getCell(6).getNumericCellValue(), row.getCell(7).getNumericCellValue());
+							line.setId(cell.getStringCellValue());
+
+							Cell cell1 = row.getCell(1);
+
+							if (cell1.getStringCellValue().equals("Single")) {
+								if(Double.valueOf(months_conn_simulate) < d){
+									line.setStroke(Color.BLACK);
+									line.setStrokeWidth(3);}
+								else{
+									line.setStroke(Color.RED);
+									line.setStrokeWidth(3);
+								}
+							} else {
+
+								if(Double.valueOf(months_conn_simulate) < d){
+									line.setStroke(Color.GREEN);
+									line.setStrokeWidth(6);}
+								else{
+									line.setStroke(Color.RED);
+									line.setStrokeWidth(6);
+								}
+							}
+
+							MyConn temp = new MyConn(line);
+							conn_ani.put(months_conn_simulate, line);
+							trackline.add(line);
+							//grp_sim.getChildren().add(line);
+						/*temp.Conn_Type = row.getCell(1).getStringCellValue();
+						temp.conn_between = row.getCell(2).getStringCellValue();
+						connection.put(line.getId(), temp);
+						ReadConnProps.run(line);
+						conn_no = Integer.parseInt(line.getId());
+						list1.getItems().add(temp.Name);*/
+							flag = 1;
+						}
+					}
+					// }
+				}
+			}
+			if(flag==1){
+				conn_no++;
+			}
+
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
+
+	}
+
+	protected void read_conn_excel_simulate(String file, Double d) {
+		int flag=0;
+		try {
+
+			workbook_conn = new XSSFWorkbook(file);
+			sheet_conn = workbook_conn.getSheetAt(0);
+			rows_conn = sheet_conn.getPhysicalNumberOfRows();
+
+			for (int r = 0; r <= rows_conn; r++) {
+				Row row = sheet_conn.getRow(r);
+				if (row != null) {
+
+					// for(int c = 0; c < cols; c++) {
+					Cell cell = row.getCell(0);
+
+					if (cell != null ) {
+						months_conn_simulate = (row.getCell(2)).toString();
+						if (Double.valueOf(months_conn_simulate) <= d) {
+
+							Line line = new Line(row.getCell(4).getNumericCellValue(), row.getCell(5).getNumericCellValue(), row.getCell(6).getNumericCellValue(), row.getCell(7).getNumericCellValue());
+							line.setId(cell.getStringCellValue());
+
+							Cell cell1 = row.getCell(1);
+
+							if (cell1.getStringCellValue().equals("Single")) {
+								if(Double.valueOf(months_conn_simulate) < d){
+									line.setStroke(Color.BLACK);
+									line.setStrokeWidth(3);}
+								else{
+									line.setStroke(Color.RED);
+									line.setStrokeWidth(3);
+								}
+							} else {
+
+								if(Double.valueOf(months_conn_simulate) < d){
+									line.setStroke(Color.GREEN);
+									line.setStrokeWidth(6);}
+								else{
+									line.setStroke(Color.RED);
+									line.setStrokeWidth(6);
+								}
+							}
+
+							trackline.add(line);
+							grp_sim.getChildren().add(line);
+						/*temp.Conn_Type = row.getCell(1).getStringCellValue();
+						temp.conn_between = row.getCell(2).getStringCellValue();
+						connection.put(line.getId(), temp);
+						ReadConnProps.run(line);
+						conn_no = Integer.parseInt(line.getId());
+						list1.getItems().add(temp.Name);*/
+							flag = 1;
+						}
+					}
+					// }
+				}
+			}
+			if(flag==1){
+				conn_no++;
+			}
+
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+		}
+
+	}
+
+
+	public void display_conn(double d){
+
+		String xlsxfile =("simulate_conn_info.xlsx");
+
+		read_conn_excel_simulate(xlsxfile, d);
+
+	}
+	public void display_animation_conn(double d){
+
+		String xlsxfile =("simulate_conn_info.xlsx");
+
+		read_conn_excel_simulate_animation(xlsxfile, d);
+
+	}
+
+
+	public void display_animation (double d){
+		//File[] xlsxfile = "simulate-info.xlxs";
+		File selectedDirectory;
+		String xlsxfile =("simulate_info.xlsx");
+
+		if (read_excel_simulate_animation(xlsxfile, d) == 0) {
+
+			list.setCellFactory(new Callback<ListView<MyObject>, ListCell<MyObject>>() {
+
+				@Override
+				public ListCell<MyObject> call(ListView<MyObject> p) {
+
+					ListCell<MyObject> cell = new ListCell<MyObject>() {
+
+						@Override
+						protected void updateItem(MyObject t,boolean bln) {
+
+							super.updateItem(t, bln);
+							if (t != null) {
+
+								setText(Integer.toString((int) Double
+										.parseDouble(t.name)));
+							} else {
+
+								setText("");
+							}
+						}
+					};
+
+					return cell;
+				}
+			});
+		} else {
+			update_list();
+		}
+	}
+
+
+	public void display (double d){
+		//File[] xlsxfile = "simulate-info.xlxs";
+		File selectedDirectory;
+		String xlsxfile =("simulate_info.xlsx");
+
+		if (read_excel_simulate(xlsxfile, d) == 0) {
+
+			list.setCellFactory(new Callback<ListView<MyObject>, ListCell<MyObject>>() {
+
+				@Override
+				public ListCell<MyObject> call(ListView<MyObject> p) {
+
+					ListCell<MyObject> cell = new ListCell<MyObject>() {
+
+						@Override
+						protected void updateItem(MyObject t,boolean bln) {
+
+							super.updateItem(t, bln);
+							if (t != null) {
+
+								setText(Integer.toString((int) Double
+										.parseDouble(t.name)));
+							} else {
+
+								setText("");
+							}
+						}
+					};
+
+					return cell;
+				}
+			});
+		} else {
+			update_list();
+		}
 	}
 
 }

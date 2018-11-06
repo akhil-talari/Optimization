@@ -6,9 +6,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+
+
 public class Hookup {
 	
 	static Install_Chromosome current;
+	static int currentNo;
 	static HashMap<Integer,Integer > connStartmonth;
     static HashMap<Integer,Integer > connduration;
     static HashMap<Integer, Integer> crewUsedpermonth;
@@ -22,11 +25,11 @@ public class Hookup {
 		
 		current_population = createChromosomes(GA.Hookup_PopSize);
 		
-		Hchromofobjs = new HashMap<String, ArrayList<Integer>>();
-
-		Scatter2DChart sc = new Scatter2DChart();
-		sc.start();
-		sc.run(0,objsfor2D);
+//		Hchromofobjs = new HashMap<String, ArrayList<Integer>>();
+//
+//		Scatter2DChart sc = new Scatter2DChart();
+//		sc.start();
+//		sc.run(0,objsfor2D);
 		while(GA.Hookup_gen <= GA.max_Hookup_gen){
 
 			ArrayList<Hookup_Chromosome> offspring_population = new ArrayList<Hookup_Chromosome>();
@@ -38,11 +41,12 @@ public class Hookup {
 
 			ArrayList<Hookup_Chromosome> new_population = new ArrayList<Hookup_Chromosome>();
 			new_population = newPopAfterRanking(GA.Hookup_PopSize,union);
-			sc.run(GA.Hookup_gen,objsfor2D);
+			//sc.run(GA.Hookup_gen,objsfor2D);
 			current_population = new_population;
 
 			GA.Hookup_gen = GA.Hookup_gen+1;
 		}
+		GA.Hookup_gen = 1;
 	/*	HRanking ranking = new HRanking(current_population);
 		ranking.getSubfront(0);*/
 	}
@@ -65,13 +69,19 @@ public class Hookup {
 
 			//Add the individuals of this front
 			for (int k = 0; k < front.size(); k++) {
+				if(GA.Hookup_gen==3){
+					front.get(k).currentNo = currentNo;
+					front.get(k).current = current;
+				}
 				new_population.add(front.get(k));
 				int[] point = new int[2];
 				point[0] = front.get(k).objectives[0];
 				point[1] = front.get(k).objectives[1];
 				objsfor2D.add(point);
-				Hchromofobjs.put(point[0]+" "+point[1],front.get(k).sequence);
-			} 
+				if(GA.Hookup_gen==3) {
+					Install.Hchromofobjs.put(point[0]+" "+point[1],front.get(k));
+				}
+				}
 
 			remain = remain - front.size();
 
@@ -79,18 +89,24 @@ public class Hookup {
 			if (remain > 0) {
 				front = ranking.getSubfront(index);
 			}       
-		} 
+		}
 
 		if (remain > 0) {                       
 
 			for (int k = 0; k < remain; k++) {
+				if(GA.Hookup_gen==3){
+					front.get(k).currentNo = currentNo;
+					front.get(k).current = current;
+				}
 				new_population.add(front.get(k));
 				int[] point = new int[2];
 				point[0] = front.get(k).objectives[0];
 				point[1] = front.get(k).objectives[1];
 				objsfor2D.add(point);
-				Hchromofobjs.put(point[0]+" "+point[1],front.get(k).sequence);
-			} 
+				if(GA.Hookup_gen==3) {
+					Install.Hchromofobjs.put(point[0]+" "+point[1],front.get(k));
+				}
+				}
 
 			remain = 0;
 		}

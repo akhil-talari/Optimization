@@ -8,6 +8,8 @@ public class Hookup_Chromosome {
 	public int objectives[];
 	public  int Number_of_violated_constraints;
     public  int rank;
+	public  int currentNo;
+	public Install_Chromosome current;
 	
 	public Hookup_Chromosome(ArrayList<Integer> solutionX){
 		

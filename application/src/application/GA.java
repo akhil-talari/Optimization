@@ -63,7 +63,7 @@ public class GA {
 			Install_CR = 0.9;
 			Install_MR = 0.1;
 			Hookup_PopSize =50;
-			max_Hookup_gen = 10;
+			max_Hookup_gen = 3;
 			Hookup_CR=0.9;
 			Hookup_MR = 0.1;
 			
@@ -74,7 +74,7 @@ public class GA {
 			Install_CR = 0.9;
 			Install_MR = 0.1;
 			Hookup_PopSize =70;
-			max_Hookup_gen = 12;
+			max_Hookup_gen = 3;
 			Hookup_CR=0.9;
 			Hookup_MR = 0.1;
 			
@@ -143,14 +143,20 @@ public class GA {
 		System.out.println(connectionMap);
 		
 		AreaMilestones = new HashMap<String, Integer>();
-		
+
+		//NOV5
 		for (AreaMS o : Main.Area_MStones.getItems()) {
 			String area1 = Main.AreaName.getCellData(o);
-			int MS = Integer.parseInt(Main.AreaDL.getCellData(o));
-			
-			AreaMilestones.put(area1,MS);
+			if(area1.equals("Interconnection PR") || area1.equals("Trestle")){
+				AreaMilestones.put(area1, 100);
+			}else {
+				int MS = Integer.parseInt(Main.AreaDL.getCellData(o));
+				System.out.println(area1);
+				AreaMilestones.put(area1, MS);
+			}
 		}
-	
+		//NOV5
+
 		System.out.println(AreaMilestones);
 		
 		for(int z=1;z<=GA.modsinzone.size();z++){
